@@ -3,136 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAMA MANTIA - PROFESIONALNI SISTEM</title>
+    <title>MAMA MANTIA - SISTEM</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, doc, onSnapshot, updateDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        const firebaseConfig = {
-            apiKey: "AIzaSyBO2uNMXho4fa7fm7eGbJQIE01l0Buj7TQ",
-            authDomain: "mamamantia-73a56.firebaseapp.com",
-            projectId: "mamamantia-73a56",
-            storageBucket: "mamamantia-73a56.firebasestorage.app",
-            messagingSenderId: "126561574117",
-            appId: "1:126561574117:web:2e1b8cacafea1d95ca880c"
-        };
-        const app = initializeApp(firebaseConfig);
-        window.db = getFirestore(app);
-        window.fb = { updateDoc, doc, increment, setDoc, onSnapshot, collection };
-    </script>
     <style>
-        body { margin: 0; font-family: sans-serif; background: #2D1409; color: white; }
-        .login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; background: linear-gradient(135deg, #2D1409, #4A2C0A); }
-        .card { background: white; color: #2D1409; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .role-btn { width: 100%; padding: 15px; margin: 5px 0; border: 1px solid #ddd; border-radius: 10px; text-align: left; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 10px; }
-        .active-role { background: #FFB74D; border-color: #FFB74D; }
-        .header { background: #2D1409; padding: 15px; color: #FFB74D; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #FFB74D; }
-        .tab-bar { display: flex; overflow-x: auto; background: #3d1f0a; padding: 10px; gap: 10px; }
-        .tab { padding: 10px 20px; border-radius: 8px; border: 1px solid #FFB74D; white-space: nowrap; cursor: pointer; }
-        .active-tab { background: #FFB74D; color: #2D1409; font-weight: bold; }
-        .main-content { padding: 15px; background: #FAF3EC; color: #2D1409; min-height: 80vh; }
-        .item-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .btn { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        .btn-green { background: #107C41; color: white; }
-        .btn-red { background: #D84315; color: white; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #2D1409; color: #fff; }
+        .container { padding: 20px; max-width: 500px; margin: auto; }
+        .card { background: #fff; color: #2D1409; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-top: 20px; }
+        .header { background: #3d1f0a; padding: 15px; text-align: center; border-bottom: 2px solid #FFB74D; color: #FFB74D; font-weight: bold; }
+        .btn { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-main { background: #FFB74D; color: #2D1409; }
+        .input-field { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center; }
+        .status-msg { text-align: center; font-size: 14px; margin-top: 10px; color: #FFB74D; }
     </style>
 </head>
 <body>
     <div id="root"></div>
+
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } = Recharts;
-
-        const ULOGE = {
-            direktor: { label: "Direktor", icon: "👔", lokal: null },
-            magacioner: { label: "Magacioner", icon: "🏭", lokal: "proizvodnja" },
-            prodavac1: { label: "Prodavac Mama 1", icon: "🏪", lokal: "mama1" },
-            prodavac2: { label: "Prodavac Mama 2", icon: "🏬", lokal: "mama2" }
-        };
 
         function App() {
-            const [user, setUser] = useState(null);
-            const [tab, setTab] = useState("stanje");
-            const [podaci, setPodaci] = useState([]);
+            const [userRole, setUserRole] = useState(null);
+            const [items, setItems] = useState([]);
+            const [newItem, setNewItem] = useState("");
 
+            // Učitavanje iz lokalne memorije telefona (radi odmah, bez interneta)
             useEffect(() => {
-                if(!window.db) return;
-                const unsub = window.fb.onSnapshot(window.fb.collection(window.db, "inventar"), (snap) => {
-                    const d = [];
-                    snap.forEach(doc => d.push({id: doc.id, ...doc.data()}));
-                    setPodaci(d);
-                });
-                return unsub;
+                const saved = localStorage.getItem("mantia_data");
+                if (saved) setItems(JSON.parse(saved));
             }, []);
 
-            const izmeni = async (id, br) => {
-                await window.fb.updateDoc(window.fb.doc(window.db, "inventar", id), { kolicina: window.fb.increment(br) });
+            const saveAndRefresh = (newList) => {
+                setItems(newList);
+                localStorage.setItem("mantia_data", JSON.stringify(newList));
             };
 
-            if (!user) {
+            const dodajArtikal = () => {
+                if (!newItem) return;
+                const newList = [...items, { id: Date.now(), naziv: newItem, kolicina: 0 }];
+                saveAndRefresh(newList);
+                setNewItem("");
+            };
+
+            const promjenaKolicine = (id, n) => {
+                const newList = items.map(i => i.id === id ? { ...i, kolicina: i.kolicina + n } : i);
+                saveAndRefresh(newList);
+            };
+
+            if (!userRole) {
                 return (
-                    <div className="login-screen">
+                    <div className="container">
                         <div className="card">
-                            <h2 style={{textAlign:'center'}}>MAMA MANTIA</h2>
-                            <p style={{textAlign:'center'}}>Izaberite ulogu za pristup:</p>
-                            {Object.entries(ULOGE).map(([k, u]) => (
-                                <button key={k} className="role-btn" onClick={() => setUser({id: k, ...u})}>
-                                    <span style={{fontSize:'20px'}}>{u.icon}</span> {u.label}
-                                </button>
-                            ))}
+                            <h2 style={{textAlign: 'center'}}>MAMA MANTIA</h2>
+                            <p style={{textAlign: 'center'}}>Izaberite ulogu:</p>
+                            <button className="btn btn-main" onClick={() => setUserRole("Direktor")}>👔 DIREKTOR</button>
+                            <button className="btn btn-main" onClick={() => setUserRole("Prodavac")}>🏪 PRODAVAC</button>
                         </div>
                     </div>
                 );
             }
 
-            const mojiArtikli = user.lokal ? podaci.filter(p => p.lokacija === user.lokal) : podaci;
-
             return (
                 <div>
                     <div className="header">
-                        <span>{user.icon} {user.label}</span>
-                        <button onClick={() => setUser(null)} style={{background:'none', border:'1px solid #FFB74D', color:'#FFB74D', padding:'5px', borderRadius:'5px'}}>Odjavi se</button>
+                        PRIJAVLJEN: {userRole} | <span onClick={() => setUserRole(null)} style={{textDecoration: 'underline', cursor: 'pointer'}}>Odjavi se</span>
                     </div>
-                    <div className="tab-bar">
-                        <div className={`tab ${tab==='stanje'?'active-tab':''}`} onClick={()=>setTab('stanje')}>📋 Stanje</div>
-                        {user.id === 'direktor' && <div className={`tab ${tab==='graf'?'active-tab':''}`} onClick={()=>setTab('graf')}>📊 Statistika</div>}
-                    </div>
-                    <div className="main-content">
-                        {tab === 'stanje' ? (
-                            <div>
-                                <h3>Zalihe: {user.lokal ? user.lokal.toUpperCase() : "SVI LOKALI"}</h3>
-                                {mojiArtikli.map(p => (
-                                    <div className="item-card" key={p.id}>
-                                        <div><strong>{p.naziv}</strong><br/><small>{p.lokacija}</small></div>
-                                        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                                            <button className="btn btn-green" onClick={() => izmeni(p.id, 1)}>+</button>
-                                            <span style={{fontWeight:'bold', fontSize:'18px'}}>{p.kolicina}</span>
-                                            <button className="btn btn-red" onClick={() => izmeni(p.id, -1)}>-</button>
-                                        </div>
+                    <div className="container">
+                        <div className="card">
+                            <h3>Unos artikala</h3>
+                            <input 
+                                className="input-field" 
+                                value={newItem} 
+                                onChange={(e) => setNewItem(e.target.value)} 
+                                placeholder="Naziv mantije/pite..." 
+                            />
+                            <button className="btn btn-main" onClick={dodajArtikal}>+ DODAJ U LISTU</button>
+                        </div>
+
+                        <div className="card">
+                            <h3>Trenutne zalihe</h3>
+                            {items.length === 0 ? <p>Nema artikala u listi.</p> : items.map(item => (
+                                <div className="item" key={item.id}>
+                                    <span>{item.naziv}</span>
+                                    <div>
+                                        <button onClick={() => promjenaKolicine(item.id, -1)} style={{padding: '5px 10px'}}>-</button>
+                                        <span style={{margin: '0 10px', fontWeight: 'bold'}}>{item.kolicina}</span>
+                                        <button onClick={() => promjenaKolicine(item.id, 1)} style={{padding: '5px 10px'}}>+</button>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div style={{height:'300px', width:'100%'}}>
-                                <h3>Pregled zaliha po lokalima</h3>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={podaci}>
-                                        <XAxis dataKey="naziv" hide />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Bar dataKey="kolicina" fill="#2D1409" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        )}
+                                </div>
+                            ))}
+                        </div>
+                        <p className="status-msg">Sistem je spreman za rad ✅</p>
                     </div>
                 </div>
             );
         }
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
