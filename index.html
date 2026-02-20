@@ -3,100 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAMA MANTIA - SISTEM</title>
+    <title>MAMA MANTIA PRO</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
     <style>
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #2D1409; color: #fff; }
-        .container { padding: 20px; max-width: 500px; margin: auto; }
-        .card { background: #fff; color: #2D1409; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-top: 20px; }
-        .header { background: #3d1f0a; padding: 15px; text-align: center; border-bottom: 2px solid #FFB74D; color: #FFB74D; font-weight: bold; }
-        .btn { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .btn-main { background: #FFB74D; color: #2D1409; }
-        .input-field { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        .item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center; }
-        .status-msg { text-align: center; font-size: 14px; margin-top: 10px; color: #FFB74D; }
+        :root { --primarna: #4A2C0A; --sekundarna: #FFB74D; --bg: #FFF8F0; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #333; }
+        .sidebar { background: var(--primarna); color: white; padding: 15px; display: flex; gap: 10px; overflow-x: auto; sticky; top: 0; z-index: 100; }
+        .tab-btn { padding: 10px 15px; border-radius: 8px; border: 1px solid var(--sekundarna); background: none; color: white; white-space: nowrap; cursor: pointer; }
+        .tab-btn.active { background: var(--sekundarna); color: var(--primarna); font-weight: bold; }
+        .card { background: white; margin: 15px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid var(--primarna); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding: 10px; }
+        .stat-card { background: var(--primarna); color: white; padding: 15px; border-radius: 10px; text-align: center; }
+        .btn-akcija { background: #107C41; color: white; border: none; padding: 10px; border-radius: 5px; width: 100%; margin-top: 10px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
+        .header-logo { text-align: center; padding: 20px; background: var(--primarna); color: var(--sekundarna); }
     </style>
 </head>
 <body>
     <div id="root"></div>
-
     <script type="text/babel">
         const { useState, useEffect } = React;
+        const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = Recharts;
+
+        // Podaci za grafikone (Primer)
+        const grafPodaci = [
+            { dan: 'Pon', prodaja: 4000 }, { dan: 'Uto', prodaja: 3000 },
+            { dan: 'Sre', prodaja: 2000 }, { dan: 'Čet', prodaja: 2780 },
+            { dan: 'Pet', prodaja: 1890 }, { dan: 'Sub', prodaja: 2390 },
+        ];
 
         function App() {
-            const [userRole, setUserRole] = useState(null);
-            const [items, setItems] = useState([]);
-            const [newItem, setNewItem] = useState("");
-
-            // Učitavanje iz lokalne memorije telefona (radi odmah, bez interneta)
-            useEffect(() => {
-                const saved = localStorage.getItem("mantia_data");
-                if (saved) setItems(JSON.parse(saved));
-            }, []);
-
-            const saveAndRefresh = (newList) => {
-                setItems(newList);
-                localStorage.setItem("mantia_data", JSON.stringify(newList));
-            };
-
-            const dodajArtikal = () => {
-                if (!newItem) return;
-                const newList = [...items, { id: Date.now(), naziv: newItem, kolicina: 0 }];
-                saveAndRefresh(newList);
-                setNewItem("");
-            };
-
-            const promjenaKolicine = (id, n) => {
-                const newList = items.map(i => i.id === id ? { ...i, kolicina: i.kolicina + n } : i);
-                saveAndRefresh(newList);
-            };
-
-            if (!userRole) {
-                return (
-                    <div className="container">
-                        <div className="card">
-                            <h2 style={{textAlign: 'center'}}>MAMA MANTIA</h2>
-                            <p style={{textAlign: 'center'}}>Izaberite ulogu:</p>
-                            <button className="btn btn-main" onClick={() => setUserRole("Direktor")}>👔 DIREKTOR</button>
-                            <button className="btn btn-main" onClick={() => setUserRole("Prodavac")}>🏪 PRODAVAC</button>
-                        </div>
-                    </div>
-                );
-            }
+            const [tab, setTab] = useState('dashboard');
+            const [zalihe, setZalihe] = useState([
+                { id: 1, naziv: "Brašno T-500", kat: "Sirovina", kolicina: 450, jm: "kg" },
+                { id: 2, naziv: "Meso (Mleveno)", kat: "Sirovina", kolicina: 35, jm: "kg" },
+                { id: 3, naziv: "Mantija Meso", kat: "Gotov proizvod", kolicina: 120, jm: "kom" }
+            ]);
 
             return (
                 <div>
-                    <div className="header">
-                        PRIJAVLJEN: {userRole} | <span onClick={() => setUserRole(null)} style={{textDecoration: 'underline', cursor: 'pointer'}}>Odjavi se</span>
+                    <div className="header-logo">
+                        <h1 style={{margin:0}}>MAMA MANTIA PRO</h1>
+                        <small>Sistem za praćenje proizvodnje i prodaje</small>
                     </div>
-                    <div className="container">
-                        <div className="card">
-                            <h3>Unos artikala</h3>
-                            <input 
-                                className="input-field" 
-                                value={newItem} 
-                                onChange={(e) => setNewItem(e.target.value)} 
-                                placeholder="Naziv mantije/pite..." 
-                            />
-                            <button className="btn btn-main" onClick={dodajArtikal}>+ DODAJ U LISTU</button>
-                        </div>
 
-                        <div className="card">
-                            <h3>Trenutne zalihe</h3>
-                            {items.length === 0 ? <p>Nema artikala u listi.</p> : items.map(item => (
-                                <div className="item" key={item.id}>
-                                    <span>{item.naziv}</span>
-                                    <div>
-                                        <button onClick={() => promjenaKolicine(item.id, -1)} style={{padding: '5px 10px'}}>-</button>
-                                        <span style={{margin: '0 10px', fontWeight: 'bold'}}>{item.kolicina}</span>
-                                        <button onClick={() => promjenaKolicine(item.id, 1)} style={{padding: '5px 10px'}}>+</button>
+                    <div className="sidebar">
+                        <button className={`tab-btn ${tab==='dashboard'?'active':''}`} onClick={()=>setTab('dashboard')}>📊 Dashboard</button>
+                        <button className={`tab-btn ${tab==='zalihe'?'active':''}`} onClick={()=>setTab('zalihe')}>🌾 Zalihe</button>
+                        <button className={`tab-btn ${tab==='dostava'?'active':''}`} onClick={()=>setTab('dostava')}>🚚 Dostava</button>
+                        <button className={`tab-btn ${tab==='troskovi'?'active':''}`} onClick={()=>setTab('troskovi')}>💰 Troškovi</button>
+                    </div>
+
+                    <div className="content">
+                        {tab === 'dashboard' && (
+                            <div>
+                                <div className="grid">
+                                    <div className="stat-card"><h3>240kg</h3><p>Brašna</p></div>
+                                    <div className="stat-card"><h3>1.200</h3><p>Prodato danas</p></div>
+                                    <div className="stat-card" style={{background:'#107C41'}}><h3>85.000</h3><p>Pazar (RSD)</p></div>
+                                </div>
+                                <div className="card">
+                                    <h3>Nedeljni promet</h3>
+                                    <div style={{ width: '100%', height: 250 }}>
+                                        <ResponsiveContainer>
+                                            <BarChart data={grafPodaci}>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="dan" />
+                                                <YAxis />
+                                                <Tooltip />
+                                                <Bar dataKey="prodaja" fill="#4A2C0A" />
+                                            </BarChart>
+                                        </ResponsiveContainer>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                        <p className="status-msg">Sistem je spreman za rad ✅</p>
+                            </div>
+                        )}
+
+                        {tab === 'zalihe' && (
+                            <div className="card">
+                                <h3>Stanje Magacina</h3>
+                                <table>
+                                    <thead>
+                                        <tr><th>Naziv</th><th>Kol.</th><th>JM</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {zalihe.map(i => (
+                                            <tr key={i.id}><td>{i.naziv}</td><td>{i.kolicina}</td><td>{i.jm}</td></tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <button className="btn-akcija">+ Dodaj Sirovinu</button>
+                            </div>
+                        )}
+
+                        {tab === 'dostava' && (
+                            <div className="card">
+                                <h3>Slanje u lokale</h3>
+                                <p>Izaberite destinaciju:</p>
+                                <div className="grid">
+                                    <button className="tab-btn" style={{color:'#333'}}>Mama 1</button>
+                                    <button className="tab-btn" style={{color:'#333'}}>Mama 2</button>
+                                </div>
+                                <input type="number" placeholder="Količina tepsija..." style={{width:'100%', padding:'10px', marginTop:10}} />
+                                <button className="btn-akcija">POTVRDI DOSTAVU</button>
+                            </div>
+                        )}
+
+                        {tab === 'troskovi' && (
+                            <div className="card">
+                                <h3>Mesečni Troškovi</h3>
+                                <ul>
+                                    <li>Struja: 45.000 RSD</li>
+                                    <li>Platni spisak: 280.000 RSD</li>
+                                    <li>Kirija: 60.000 RSD</li>
+                                </ul>
+                                <hr/>
+                                <strong>Ukupno: 385.000 RSD</strong>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
