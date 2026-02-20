@@ -1,0 +1,152 @@
+﻿<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAMA MANTIA ADMIN</title>
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, doc, onSnapshot, updateDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBO2uNMXho4fa7fm7eGbJQIE01l0Buj7TQ",
+            authDomain: "mamamantia-73a56.firebaseapp.com",
+            projectId: "mamamantia-73a56",
+            storageBucket: "mamamantia-73a56.firebasestorage.app",
+            messagingSenderId: "126561574117",
+            appId: "1:126561574117:web:2e1b8cacafea1d95ca880c"
+        };
+
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            window.db = getFirestore(app);
+            window.fb = { updateDoc, doc, increment, setDoc, onSnapshot, collection };
+            console.log("Firebase spreman!");
+        } catch (e) {
+            console.error("Firebase greška:", e);
+        }
+    </script>
+
+
+    <style>
+        /* TVOJ DIZAJN IZ pekara_final.jsx */
+        body { margin: 0; font-family: sans-serif; background: #FAF3EC; }
+        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        .sidebar { background: #2D1409; color: #FFB74D; padding: 15px; display: flex; gap: 10px; overflow-x: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .tab { padding: 12px 20px; border-radius: 8px; cursor: pointer; white-space: nowrap; border: 1px solid #FFB74D; color: #FFB74D; transition: 0.3s; }
+        .active-tab { background: #FFB74D !important; color: #2D1409 !important; font-weight: bold; }
+        .main { flex: 1; padding: 20px; overflow-y: auto; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E8D5C0; }
+        .btn-u { background: #107C41; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; }
+        .btn-p { background: #D84315; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; }
+        .stanje { font-size: 26px; font-weight: 800; color: #2D1409; background: #FFF3E0; padding: 5px 15px; border-radius: 10px; }
+        h1, h2 { color: #2D1409; }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div style="padding: 20px; text-align: center;">Učitavanje MAMA MANTIA sistema...</div>
+    </div>
+
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+
+        function App() {
+            const [lokacija, setLokacija] = useState('mama1');
+            const [artikli, setArtikli] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+
+            useEffect(() => {
+                if (!window.db) return;
+                
+                const q = window.fb.collection(window.db, "inventar");
+                const unsub = window.fb.onSnapshot(q, (snap) => {
+                    const temp = [];
+                    snap.forEach(d => temp.push({id: d.id, ...d.data()}));
+                    // Filtriramo samo za trenutnu lokaciju
+                    const filtrirano = temp.filter(p => p.lokacija === lokacija);
+                    setArtikli(filtrirano);
+                    setLoading(false);
+                }, (err) => {
+                    console.error("Greška pri čitanju:", err);
+                });
+                
+                return () => unsub();
+            }, [lokacija]);
+
+
+            const promeniStanje = async (id, broj) => {
+                try {
+                    const ref = window.fb.doc(window.db, "inventar", id);
+                    await window.fb.updateDoc(ref, { kolicina: window.fb.increment(broj) });
+                } catch (e) {
+                    alert("Greška pri upisu u bazu!");
+                }
+            };
+
+
+            const dodajArtikal = async () => {
+                const naziv = prompt("Unesite naziv novog proizvoda:");
+                if(!naziv) return;
+                const id = lokacija + "_" + Date.now();
+                await window.fb.setDoc(window.fb.doc(window.db, "inventar", id), {
+                    naziv: naziv,
+                    kolicina: 0,
+                    lokacija: lokacija
+                });
+            };
+
+
+            return (
+                <div className="app-container">
+                    <div className="sidebar">
+                        <div className={`tab ${lokacija==='proizvodnja'?'active-tab':''}`} onClick={()=>setLokacija('proizvodnja')}>🏭 FABRIKA</div>
+                        <div className={`tab ${lokacija==='mama1'?'active-tab':''}`} onClick={()=>setLokacija('mama1')}>🏪 MAMA 1</div>
+                        <div className={`tab ${lokacija==='mama2'?'active-tab':''}`} onClick={()=>setLokacija('mama2')}>🏬 MAMA 2</div>
+                    </div>
+                    
+                    <div className="main">
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                            <h2>Lokal: {lokacija.toUpperCase()}</h2>
+                            <button onClick={dodajArtikal} style={{padding:'10px 15px', borderRadius:'10px', background:'#2D1409', color:'#FFB74D', fontWeight:'bold'}}>+ DODAJ</button>
+                        </div>
+
+
+                        {loading ? <p>Povezivanje sa bazom...</p> : (
+                            artikli.length === 0 ? <p>Nema artikala. Kliknite na + DODAJ da unesete prvi.</p> :
+                            artikli.map(p => (
+                                <div className="card" key={p.id}>
+                                    <div>
+                                        <div style={{fontSize:'18px', fontWeight:'700'}}>{p.naziv}</div>
+                                        <div style={{fontSize:'12px', color:'#999'}}>Stanje uživo</div>
+                                    </div>
+                                    <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
+                                        <button className="btn-u" onClick={() => promeniStanje(p.id, 1)}>ULAZ</button>
+                                        <span className="stanje">{p.kolicina}</span>
+                                        <button className="btn-p" onClick={() => promeniStanje(p.id, -1)}>PRODAJA</button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
